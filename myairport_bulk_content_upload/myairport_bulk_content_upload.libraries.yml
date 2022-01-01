@@ -1,0 +1,8 @@
+myairport-bulk-content-upload:
+  version: 1.x
+  js:
+    js/myairport-bulk-content-upload.js: { defer: true, async: true }
+
+  dependencies:
+    - core/jquery
+    - core/drupalSettings

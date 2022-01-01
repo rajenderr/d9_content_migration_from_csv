@@ -1,0 +1,9 @@
+myairport_bulk_content_upload.myairport_bulk_content_upload:
+  path: '/admin/content-bulk-upload'
+  defaults:
+    _controller: '\Drupal\myairport_bulk_content_upload\Controller\ContentBulkUploadController::myairport_bulk_content_upload'
+    _title: 'Content Bulk Upload'
+  requirements:
+    _permission: 'administer site configuration'
+  options:
+    no_cache: 'TRUE'
