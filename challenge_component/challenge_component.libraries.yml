@@ -1,0 +1,40 @@
+challenge.component.submit.photo:
+  version: VERSION
+  css:
+    component:
+      css/jquery_countdown_timer.css: {}
+  js:
+    js/jquery_countdown_timer.js: {}
+    js/jquery_countdown_timer_init.js: {}
+    js/challenge_component.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery.once
+    
+explore_gallery:
+  version: VERSION
+  js:
+    js/explore-gallery.js: {}
+
+command.managed_file_upload_complete_event_command:
+  js:
+    js/managed_file_upload_complete_event_command.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+
+search.search_page:
+  js:
+    js/search.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+
+challenge_component.submission_moderation:
+  js:
+    js/submission_moderation.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once    

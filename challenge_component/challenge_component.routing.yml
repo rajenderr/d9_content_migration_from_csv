@@ -1,0 +1,30 @@
+submit_photo.open_modal_form:
+  path: '/node/add/submission/{challenge_id}'
+  defaults:
+    _title: ''
+    _controller: '\Drupal\challenge_component\Controller\SubmitPhotoController::openModalForm'
+  requirements:
+    _permission: 'access content'
+submit_photo_video.form:
+  path: '/select/photo/video/{challenge_id}'
+  defaults:
+    _controller: '\Drupal\challenge_component\Controller\SubmitPhotoVideoController::openSelectModalForm'
+    _title: 'Type of Submission'
+  requirements:
+    _permission: 'access content'
+
+challenge.gallery_load_more:
+  path: '/get-gallery-items'
+  defaults:
+    _controller: '\Drupal\challenge_component\Controller\SubmitPhotoVideoController::loadMoreGalleryItems'
+    _title: 'Gallery Items'
+  requirements:
+    _permission: 'access content'
+
+challenge.update_node_submission_moderation:
+  path: '/update-submissoion-moderation'
+  defaults:
+    _controller: '\Drupal\challenge_component\Controller\SubmitPhotoVideoController::updateSubmissionNode'
+    _title: 'Update node'
+  requirements:
+    _permission: 'access content'       

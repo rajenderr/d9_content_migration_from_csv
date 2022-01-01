@@ -1,0 +1,198 @@
+{# cubic_forum/templates/explore-gallery.html.twig #}
+
+{% if media_data is not empty %}
+  <div class="gallery-data-wrapper">
+    {% for key,value in media_data %}
+        <div class="card">
+            
+               <div class="col-submission_item">
+    <div class="sub_image_wrap">
+         <div class="modal-show" data-bs-toggle="modal" data-bs-target="#popup-content-{{ value.mid }}">
+        {% set type = value.media_type|split('/', 2)[0] %}
+      {% if type == 'image' %}
+        <img src ="{{value.media_url}}">
+      {% endif %}
+    	{% if type == 'video' %}
+        <video controls>
+          <source src="{{value.media_url}}" type="{{ value.media_type }}">
+        </video>
+      {% endif %}
+      {% if type == 'remote_video' %}
+        <iframe src="{{value.media_url}}"></iframe>  
+      {% endif %}
+         </div>
+      
+      <div class="modal fade gallery_overlay_model" id="popup-content-{{ value.mid }}" tabindex="-1" aria-labelledby="galleryModalPopup" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+          <div class="modal-content">
+            <div class="modal-header">
+              <a class="btn-close" data-bs-dismiss="modal" aria-label="Close"></a>
+            </div>
+              <div class="modal-body">
+            <div class="challenge_overlay_voted_body">
+              <div class="row">
+           
+                <div class="gallery_gallery_slider">
+                  <div class="gallery_image">
+                    {% set type = value.media_type|split('/', 2)[0] %}
+					  {% if type == 'image' %}
+						<img src ="{{value.media_url}}">
+					  {% endif %}
+						{% if type == 'video' %}
+						<video controls>
+						  <source src="{{value.media_url}}" type="{{ value.media_type }}">
+						</video>
+					  {% endif %}
+					  {% if type == 'remote_video' %}
+						<iframe src="{{value.media_url}}"></iframe>  
+					  {% endif %}
+                  </div>
+                                             
+               
+                </div>
+                <div class="Photo_details_wrap">
+                  <div class="photo_title_wrap">
+                    <div class="title_location_w">
+                      <div class="photo_title"><h2>{{ value.pro_name }}</h2></div>
+                     {% if  value.media_location is not empty %}<div class="photo_location"><i class="bi bi-geo-alt-fill"></i>{{ value.media_location }}</div>{% endif %}
+                    </div>
+                                                      <div class="share_like_wrapper">
+                    <div class="a2a_kit a2a_kit_size_32 a2a_default_style share_link_wrap">
+        <a class="a2a_dd addtoany_share"><i class="bi bi-share-fill"></i>Share</a>
+</div>
+                                                       {#
+<div class="share_link_wrap like">
+                      <a href="#"><i class="bi bi-heart"></i>50 Likes</a>
+                    </div>
+#}
+                                                </div>
+                  </div>
+                  <div class="photo_technical_detail_wrap">
+                    <div class="row">
+                      {% if  value.pro_name is not empty %}
+                      <div class="col-md-4">
+                        <div class="photographer_w">
+                          <div class="user_img"><figure><img src="{{ value.pro_image }}"></figure></div>
+                                                                                <div class="user_name_wrap">
+{# {% if  value.pro_name is not empty %} #}
+                      <div class="user_tag">AMBASSADOR</div>
+{# {% endif %} #}
+                      <div class="user_name">{{ value.pro_name }} </div>
+                  </div>
+                          
+                        </div>
+                      </div>
+                      {% endif %}
+
+                      <div class="col-md-8">
+                        <div class="photo_tech_w">
+                          <div class="photo_tech_row">
+                            {% if  value.media_body is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">BODY</h4>
+                              <p class="tech_d">{{ value.media_body }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if  value.media_aperture is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">APERTURE</h4>
+                              <p class="tech_d">{{ value.media_aperture }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if  value.media_exposure is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">EXPOSURE</h4>
+                              <p class="tech_d">{{ value.media_exposure }}</p>
+                            </div>
+                          {# </div>
+                          <div class="photo_tech_row"> #}
+                            {% endif %}
+
+                            {% if  value.media_lens is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">LENS</h4>
+                              <p class="tech_d">{{ value.media_lens }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if  value.media_focal_length is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">FOCAL LENGTH</h4>
+                              <p class="tech_d">{{ value.media_focal_length }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if  value.media_iso is not empty %}
+                            <div class="photo_tech_detail">
+                              <h4 class="tech_title">ISO</h4>
+                              <p class="tech_d">{{ value.media_iso }}</p>
+                            </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="hover_content">
+        <div class="expand_btn" data-bs-toggle="modal" data-bs-target="#popup-content-{{ value.mid }}">Expand</div>
+        <div class="hover_description ">
+            <div class="submission_title">{{ value.media_title }}</div>
+            {% if  value.media_body is not empty %}
+            <div class="camera_body"><h2>BODY</h2><p>{{ value.media_body }} </p></div>
+            {% endif %}
+            {% if  value.media_lens is not empty %}
+            <div class="camera_lens"><h2>LENS</h2><p>{{ value.media_lens }} </p></div>
+            {% endif %}
+        </div>
+        <div class="user_details">
+            {% if value.pro_name is not empty %}
+                <div class="user_picture">
+                    {{ value.pro_name }}
+                    {% if  value.pro_image is empty %}
+                        <img src="/themes/custom/sony_alphauniverse/images/no_thumbnail.jpg" class="unavailable-thumbnail">
+                    {% endif %}
+                </div>
+                <div class="user_name_wrap">
+                    <div class="user_tag">AMBASSADOR</div>
+                    <div class="user_name">{{ value.pro_name }}</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>           
+
+       
+              
+                            
+            
+            
+            
+            
+            
+        </div>
+    {% endfor %}
+  </div>
+  <div class = "count-wrapper">
+    <span class="result-summary">Displaying {{ current_items }} of {{ media_data_count }}</span>
+  </div>
+ {#  {{ media_data_count }}
+  {{ no_of_items }} #}
+  {% if media_data_count > no_of_items %}
+    <input type="button" class = "btn-primary btn media-load-more" value="Load more" total-media-items = {{ media_data_count }} display-items = "{{ current_items }}" nid = "{{ node_nid }}">
+  {% endif %}
+{% else %}
+  <h6>No gallery available !</h6>
+{% endif %}
+
+

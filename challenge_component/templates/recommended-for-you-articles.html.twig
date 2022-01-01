@@ -1,0 +1,45 @@
+{% if article_data is not empty %}
+  <div class="container recommended_for_you">
+    <div class="row">
+      <div class="col-lg-4 col-md-12">
+      <div class="float-left">
+        <div class="section_content_title_wrap">
+            <div class="section_title_wrap">
+              <h1 class="section_title">Recommended</h1>
+              <h2 class="section_sub_title">For You</h2>
+            </div>
+          </div>
+      </div>
+    </div>
+    <div class="col-lg-8 col-md-12 product-featured" data-aos="fade-left" data-aos-duration="1500">
+      <div class="view view-recommended-for-you-articles view-id-recommended_for_you_articles view-display-id-block_1" >
+        <div class="view-content row">
+          {% for key,value in article_data %}
+            <div class="views-row">
+              <div class="views-field views-field-nothing">
+                <span class="field-content">
+                  <div class="challenge_content places_item recommended_item">
+                    <div class="feature_image challenge_feature_img">
+                      {% if value.image_url %}
+                        <img src="{{ value.image_url|image_style('square_image') }}">
+                      {% endif %}
+                    </div>
+                    <div class="section_content">
+                      <div class="challenge_type_location_wrap">
+                        <div class="challenge-location">{{ value.artical_theme }}</div>
+                      </div>
+                      <div class="challengetitle">
+                        {{ value.title }}
+                        <span class="read_more"><a href="/node/{{ value.nid }}"></a></span>
+                      </div>
+                    </div>
+                  </div>
+                </span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}

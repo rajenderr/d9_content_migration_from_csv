@@ -1,0 +1,507 @@
+<?php
+
+/**
+ * @file
+ * Contains challenge_component.module.
+ */
+
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\OpenModalDialogCommand;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\views\Views;
+use Drupal\Core\Ajax\CssCommand;
+use Drupal\Core\Ajax\InvokeCommand;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+use Drupal\node\Entity\Node;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\media\Entity\Media;
+use Drupal\file\Entity\File;
+use Symfony\Component\HttpFoundation\Request;
+use Taco\Tools\Exif;
+
+/**
+ * Implements hook_help().
+ */
+function challenge_component_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the challenge_component module.
+    case 'help.page.challenge_component':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Custom module to enhance challenge component features.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function challenge_component_theme() {
+  return [
+    'challenge_component' => [
+      'render element' => 'children',
+    ],
+    'submit_challenges_block' => [
+      'variables' => [
+        'block_content' => NULL,
+        'block_build_content' => NULL,
+        'block_voting_content' => NULL,
+        'block_voting' => NULL,
+      ],  
+    ],
+    'search_block' => [
+      'variables' => [
+        'custom_form' => NULL,
+      ],  
+    ],
+    'search_result_block' => [
+      'variables' => [
+        'keyword' => NULL,
+      ],  
+    ],
+    'custom_search_form' => [
+      'render element' => 'form',
+    ],
+    'explore_gallery' => [
+      'variables' => [
+        'media_data' => NULL,
+        'media_data_count' => NULL,
+        'node_nid' => NULL,
+        'current_items' => NULL,
+        'no_of_items' => NULL,
+      ],
+    ],
+    'recommended_for_you_articles' => [
+      'variables' => [
+        'article_data' => NULL,
+      ],  
+    ],
+  ];
+}
+
+/**
+ * {@inheritdoc}
+ *
+ * Implements hook_form_FORM_ID_alter() for form with ID form_alter.
+ */
+function challenge_component_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  if ($form_id == 'node_submission_form' || $form_id == 'node_submission_edit_form') {
+    $vid = 'body';
+    $body_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+    foreach ($body_terms as $term) {
+      $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+      $status = $term_obj->get('field_ongoing_discontinued')->getValue()[0]['value'];
+      if($status == "0" || $status == "1"){
+        $body_data[$term->tid] = $term->name;
+      }
+    }
+    $form['field_body']['widget']['#options'] = $body_data;
+    $form['#attached']['library'][] = 'challenge_component/challenge.component.submit.photo';
+    $nid = \Drupal::request()->query->get('nid');
+    if (isset($nid)) {
+      $form['field_challenge']['widget']['#default_value'] =$nid;    
+    }
+
+  $field_publish = $form_state->getValue('field_publish'); 
+    $form['actions']['submit']['#submit'][] = 'submission_node_form';
+
+  }
+  if ($form_id == 'node_submission_form') {
+    if (\Drupal::currentUser()->isAnonymous()) {
+      $node = \Drupal::routeMatch()->getParameter('node');
+      if ($node instanceof \Drupal\node\NodeInterface) {
+        $nid = $node->id();
+        $node_details = Node::load($nid);
+        $type = $node_details->getType();
+      }
+      if ($type == 'challenge') {
+        $path = \Drupal::request()->getpathInfo(); 
+        $form['body']['widget']['#after_build'][] = '_allowed_formats_remove_textarea_help';
+        $types_of_challenge = $node_details->get('field_types_of_challenge')->getValue()[0]['value'];
+        $form['field_media_image']['#access'] = FALSE;
+        if ($types_of_challenge == "photo_challenge"){
+          $form['field_select_video']['#access'] = FALSE;
+          $form['field_media_image']['#access'] = FALSE;
+        }
+        if ($types_of_challenge == "video_challenge") {
+          $form['field_select_image']['#access'] = FALSE;
+          $form['field_media_image']['#access'] = FALSE;
+        }
+      }  
+      
+      $form['#prefix'] = '<div id="modal_example_form">';
+      $form['#suffix'] = '</div>';
+      $form['field_challenge']['widget']['#default_value'] = $nid;
+      $form['actions']['submit']['#value'] = t('Submit Entry');
+      $form['status_messages'] = [
+        '#type' => 'status_messages',
+        '#weight' => -10,
+      ];
+      $form['#attached']['library'][] = 'core/drupal.dialog.ajax';
+      $form['actions']['submit']['#ajax'] = [
+        'callback' => 'ajax_test_dialog_form_callback_modal',
+      ];
+    }
+  }
+  if ($form_id == 'views_form_media_library_widget_video' || $form_id == 'views_form_media_library_widget_remote_video') {
+    if (\Drupal::currentUser()->isAnonymous()) {
+      $form['output']['#access'] = FALSE;
+    }
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-pros-block-1') {
+    $options = (array_filter($form['field_pro_location_target_id']['#options']));
+    $form['field_pro_location_target_id']['#options'] = $options;
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-theme-listing-page-1') {
+    $form['body_category']['#options']['All'] = t('Body');
+    $vid = 'body';
+    $body_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+    foreach ($body_terms as $term) {
+      $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+      $status = $term_obj->get('field_ongoing_discontinued')->getValue()[0]['value'];
+      if($status == "0" || $status == "1"){
+        $body_data[$term->tid] = $term->name;
+      }
+    }
+    $body_terms = array_merge(array("All" => 'Body'), $body_data);
+    $form['body_category']['#options'] = $body_terms;
+    $vid = 'lens';
+    $lens_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+    foreach ($lens_terms as $term) {
+      $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+      $brand_exists = $term_obj->get('field_brand')->value;
+      if($brand_exists){
+        $lens_data[$term->tid] = $brand_exists;
+      }
+    }
+    $lens_terms = array_merge(array("All" => 'Lens'), $lens_data);
+    $form['lens_category']['#options'] = $lens_terms;
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-profile-listing-page-page-1') {
+    $form['body']['#options']['All'] = t('Body');
+    $form['lens']['#options']['All'] = t('Lens');
+  }
+  // if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-main-search-page-1') {
+  //   $form['sort_order']['#type'] = 'hidden';
+  //   $form['keyword'] = 'hidden';
+  // }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-body-artical-listing-block-1') {
+    $form['field_tags_target_id']['#options']['All'] = t('Content Type');
+    //$form['field_lens_category_target_id']['#options']['All'] = t('Lens');
+    $vid = 'lens';
+    $lens_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+    $lens_data['All'] = 'Lens';
+    foreach ($lens_terms as $term) {
+      $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+      $brand_tid = $term_obj->field_lense_type->getValue()[0]['target_id'];
+      if ($brand_tid) {
+        $brand_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($brand_tid);
+        if (is_object($brand_obj)) {
+          $lens_data[$brand_obj->get('tid')->value] = $brand_obj->get('name')->value;
+        }
+      }
+    }
+    //$lens_terms = array_merge(array("All" => 'Lens'), $lens_data);
+    $form['field_lens_category_target_id']['#options'] = $lens_data;
+    // $form['sort_by']['#type'] = 'hidden';
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-body-artical-listing-block-2') {
+    $form['field_tags_target_id']['#options']['All'] = t('Content Type');
+    $form['field_body_category_target_id']['#options']['All'] = t('Body');
+    // $form['sort_by']['#type'] = 'hidden';
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-body-artical-listing-block-3') {
+    $form['field_tags_target_id']['#options']['All'] = t('Content Type');
+    // $form['sort_by']['#type'] = 'hidden';
+  }
+  if ($form_id == 'views_exposed_form' && $form['#id'] == 'views-exposed-form-body-artical-listing-block-4') {
+    //dpm($form);
+    $form['field_tags_target_id']['#options']['All'] = t('Content Type');
+    $form['field_lense_type_target_id']['#options']['All'] = t('Brand');
+    // $form['sort_by']['#type'] = 'hidden';
+  }
+  
+}
+
+  /**  
+   * Implements hook_field_widget_WIDGET_TYPE_form_alter().
+   */
+  function challenge_component_field_widget_entity_reference_paragraphs_form_alter(&$element, &$form_state, $context) {
+    // if ($element['#paragraph_type'] == 'sony_body') {
+    //   $vid = 'body';
+    //   $body_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+    //   foreach ($body_terms as $term) {
+    //     $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+    //     $status = $term_obj->get('field_ongoing_discontinued')->getValue()[0]['value'];
+    //     if($status == "0"){
+    //       $body_data[$term->tid] = $term->name;
+    //     }
+    //   }
+    //   $element['subform']['field_body_type']['widget']['#options'] = $body_data;
+    // }
+    if ($element['#paragraph_type'] == 'lense_component') {
+      $vid = 'lens';
+      $lens_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+      foreach ($lens_terms as $term) {
+        $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+        $brand_tid = $term_obj->field_lense_type->getValue()[0]['target_id'];
+        if ($brand_tid) {
+          $brand_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($brand_tid);
+          if (is_object($brand_obj)) {
+            $lens_data[$brand_obj->get('tid')->value] = $brand_obj->get('name')->value;
+          }
+        }
+      }
+      $element['subform']['field_lense_type']['widget']['#options'] = $lens_data;
+    }
+    if ($element['#paragraph_type'] == 'accessories_component') {
+      $vid = 'accessories';
+      $accessories_terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+      foreach ($accessories_terms as $term) {
+        $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+        $status = $term_obj->get('field_ongoing_discontinued')->getValue()[0]['value'];
+        if($status == "0"){
+          $accessories_data[$term->tid] = $term->name;
+        }
+      }
+      $element['subform']['field_accessories_type']['widget']['#options'] = $accessories_data;
+    }
+  }
+
+function submission_node_form($form, FormStateInterface $form_state) {
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if ($node instanceof \Drupal\node\NodeInterface) {
+    $nid = $node->id();
+    $field_publish = $form_state->getValue('field_publish'); 
+    $status = $form_state->getValue('status'); 
+    if ($field_publish[0]['value'] == '1') {
+      $node = Node::load($nid);
+      $node->setPublished(FALSE);
+      $node->save();
+    }
+  }
+}
+
+
+/**
+ * Implements custom _allowed_formats_remove_textarea_help().
+ */
+function _allowed_formats_remove_textarea_help($form_element, FormStateInterface $form_state) {
+  if (isset($form_element[0]['format'])) {
+    unset($form_element[0]['format']['guidelines']);
+    unset($form_element[0]['format']['help']);
+    unset($form_element[0]['format']['#type']);
+    $form_element[0]['format']['format']['#access'] = FALSE;
+  }
+  return $form_element;
+}
+
+/**
+ * Implements custom ajax_test_dialog_form_callback_modal().
+ */
+function ajax_test_dialog_form_callback_modal($form, &$form_state) {
+  $response = new AjaxResponse();
+  if ($form_state->getErrors()) {
+    unset($form['#prefix']);
+    unset($form['#suffix']);
+    $form['status_messages'] = [
+      '#type' => 'status_messages',
+      '#weight' => -10,
+    ];
+    $response->addCommand(new HtmlCommand('#modal_example_form', $form));
+  }
+  else {
+    $response = new AjaxResponse();
+    $response->addCommand(new CssCommand('#popup-photo', ['visibility' => 'hidden']));
+    $response->addCommand(new CssCommand('#popup-video', ['visibility' => 'hidden']));
+    $challege_id = $form_state->getValue('nid');
+    $view = Views::getView('submissions_successful');
+    $view->setDisplay('block_1');
+    $view->setArguments([$challege_id]);
+    $build['content'] = $view->render();
+    $content = 'Entry submission successful! Your image will be entered into the  challenge once it is reviewed and approved by Sony team.';
+    $response->addCommand(new OpenModalDialogCommand($content, $build, ['width' => '1100']));
+  }
+  return $response;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function challenge_component_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if (isset($form['#id']) && ($form['#id'] === 'views-exposed-form-theme-listing-page-1' || $form['#id'] === 'views-exposed-form-profile-listing-page-page-1' || $form['#id'] === 'views-exposed-form-body-artical-listing-block-1' || $form['#id'] === 'views-exposed-form-body-artical-listing-block-2' || $form['#id'] === 'views-exposed-form-body-artical-listing-block-3' || $form['#id'] === 'views-exposed-form-body-artical-listing-block-4') ) {
+    $form['sort_by']['#title_display'] = 'invisible';
+    $form['sort_by']['#attributes']['style'][] = 'display:none;';
+    $form['sort_order']['#title']= "Sort";
+  }
+  if ($form['#id'] === 'views-exposed-form-media-library-widget') {
+    if (\Drupal::currentUser()->isAnonymous()) {
+      $form['name']['#access'] = FALSE;
+      $form['actions']['#access'] = FALSE;
+      $form['sort_by']['#access'] = FALSE;
+    }
+  }  
+}
+ 
+/**
+ * Implements hook_entity_insert() for extracting and storing game files.
+ */
+function challenge_component_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+  /*dpm($entity->getEntityTypeId());
+  if($entity->getEntityTypeId() == 'file') {
+    $file = File::load($entity->id());
+    $file_name = $file->getFilename();
+    $file_uri = $file->getFileUri();
+    $media_path = file_create_url($file_uri);
+    $exif = exif_read_data($media_path, 0, true);
+    foreach ($exif as $key => $section) {
+      foreach ($section as $name => $val) {
+        $image_data[$key][$name][] = $val;
+      }
+    }
+    dpm($image_data);
+  }*/
+}     
+/**
+ * Implements hook_element_info_alter().
+ */
+function challenge_component_element_info_alter(array &$info) {
+  // Add a custom #process hook to the managed_file element:
+  $info['managed_file']['#process'][] = 'challenge_component_managed_file_process';
+  // Add the custom command to managed_file elements, so that it is
+  // available when called:
+  $info['managed_file']['#attached']['library'][] = 'challenge_component/command.managed_file_upload_complete_event_command';
+}
+
+/**
+ * Custom ajax callback for managed files.
+ *
+ * Overrides \Drupal\file\Element\ManagedFile::uploadAjaxCallback()
+ *
+ * @see \Drupal\file\Element\ManagedFile::uploadAjaxCallback
+ */
+function challenge_component_managed_file_ajax_callback(array &$form, FormStateInterface $form_state) {
+  $tempstore = \Drupal::service('tempstore.private');
+  $store = $tempstore->get('challenge_component');
+  $file_data = $store->get('file_data');
+  if ($file_data) {
+    $store->delete('file_data');
+  }
+  
+  $formValues = $form_state->getValues();
+  $file_id = $formValues['field_select_image'][0]['fids'][0];
+  
+  if (!$file_id) {
+    $file_id = $formValues['field_media_image'][0]['fids'][0];
+  }
+  if ($file_id) {
+    $file = File::load($file_id);
+    $file_uri = $file->getFileUri();
+    $fmdm = \Drupal::service('file_metadata_manager');
+    $file_metadata = $fmdm->uri($file_uri);
+
+    $rows = [];
+    foreach ($file_metadata->getSupportedKeys('exif', ['ifds' => TRUE]) as $ifd) {
+      $keys = $file_metadata->getSupportedKeys('exif', ['ifd' => $ifd[0]]);
+      foreach ($keys as $key) {
+        $x = $file_metadata->getMetadata('exif', $key);
+        if ($x) {
+          $rows[$key[1]] = $x['text'] ? $x['text'] : $x['value'];
+        }
+      }
+    }
+
+    $tempstore = \Drupal::service('tempstore.private');
+    $store = $tempstore->get('challenge_component');
+    $store->set('file_data', $rows);
+
+    $response = \Drupal\file\Element\ManagedFile::uploadAjaxCallback($form, $form_state, \Drupal::request());
+    $response->addCommand(new \Drupal\challenge_component\Ajax\ManagedFileUploadCompleteEventCommand());
+    return $response;
+  }
+  else {
+    $response = \Drupal\file\Element\ManagedFile::uploadAjaxCallback($form, $form_state, \Drupal::request());
+    return $response;
+  }
+}
+
+/**
+ * Custom process callback added to managed_file elements.
+ *
+ * Replaces the original #ajax callback with a custom one.
+ */
+function challenge_component_managed_file_process(array &$element, FormStateInterface $form_state) {
+
+  $element['upload_button']['#ajax']['callback'] = 'challenge_component_managed_file_ajax_callback';
+  return $element;
+}
+
+/**
+ * Implements hook_preprocess_views_view_unformatted().
+ */
+function challenge_component_preprocess_views_view_unformatted(&$variables) {
+  $view = $variables['view'];
+  // ksm($variables['view']);
+  // print_r($view);exit;
+  // echo $view->id();exit;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for views templates.
+ */
+
+function challenge_component_preprocess_views_view(&$variables) {
+  $view = $variables['view'];
+  if ($view->id() == 'main_search') {
+    $keyword = Drupal::request()->query->get('keyword', '');
+    $params = [];
+    if ($keyword !== '') {
+      $params['keyword'] = $keyword;
+    }
+    // Check if article theme present
+    $facet_query = Drupal::request()->query->get('lense', '');
+    // print_r($facet_query);exit;
+    if ($facet_query !== '') {
+      // Get first filter which is article theme.
+      $first_facet = $facet_query[0];
+      $items = explode(':', $first_facet); 
+      if (isset($items[0]) && $items[0] === 'article_theme') {
+        $params['lense'][] = $facet_query[0];
+      }
+    }
+    
+    if (is_array($facet_query)) {
+      $show_clear_all = FALSE;
+      foreach ($facet_query as $query) {
+        $items = explode(':', $query); 
+        if (isset($items[0]) && $items[0] !== 'article_theme') {
+          $show_clear_all = TRUE;
+        }
+      }
+      if ($show_clear_all) {
+        $options = $params;
+        $variables['clear_all_link'] = Link::createFromRoute('Clear All', 'view.main_search.page_1', $options);
+      }
+      
+    }
+    
+  }
+
+}
+
+
+
+/**
+* Implements hook_views_pre_render().
+*/
+function challenge_component_views_pre_render(ViewExecutable $view) {
+  if (isset($view) && ($view->id() == 'main_search')) {
+    $view->element['#attached']['library'][] = 'challenge_component/search.search_page';
+  }
+}

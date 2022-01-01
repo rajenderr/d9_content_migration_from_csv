@@ -1,0 +1,31 @@
+{{ form.form_build_id }}
+{{ form.form_token }}
+{{ form.form_id }}
+<div class="modal fade search_overlay_model" id="searchModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-fullscreen">
+		<div class="modal-content">
+			<div class="modal-header">
+			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="search_overlay_body">
+					<div class="row">
+						<div class="search_intraction"><h2>{{ 'What are you searching for?' | t }}</h2></div>
+					  <div class="search_form_wrap">
+					    <div class="search_input_field_wrap form-outline">
+                {{ form.search_record }}
+							</div>
+							<div class="browse_categories_wrap">
+								<div class="categories_header">{{ 'BROWSE CATEGORIES' | t }}</div>
+								<div class="categories_list">
+                  {{ form.theme_tags }}
+								</div>
+							</div>
+					  </div>
+					</div>
+				</div>
+			</div>
+		</div>
+		</div>
+	</div>
+</div>		

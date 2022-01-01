@@ -1,0 +1,35 @@
+{{ attach_library('challenge_component/challenge.component.submit.photo')}}
+<div class="challenge-wrapper">
+  {{ block_build_content }}
+  <div class = "submit-photo-button"><a class="button" href="#popup-{{ block_content }}">Submit</a></div>
+  <div id="popup-photo_video" class="overlay-popup overlay-popup-sm">
+    <a class="popup-close-sm" href="#"><img src="/themes/custom/sony_alphauniverse/images/icons-close.png" alt="popup close"></a>
+    <div class="popup popup-sm challenge-submission-popup">
+      <h4 class="popup-title popup-title-sm">Type of submission</h4>
+      <div class="add-button-wrap">
+        <a class="button add-photo" href="#popup-photo">Photo</a>
+        <a class="button add-video" href="#popup-video">Video</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="popup-photo" class="overlay-popup">
+    <div class="popup challenge-submission-popup">
+      <a class="popup-close" href="#"><img src="/themes/custom/sony_alphauniverse/images/icons-close.png" alt="popup close"></a>
+      <h2 class="popup-title">Challenge Submission</h2>
+      {{ drupal_entity_form('node', values={type: 'submission'}) }}
+    </div>
+  </div>
+  <div id="popup-video" class="overlay-popup">
+    <div class="popup challenge-submission-popup">
+      <a class="popup-close" href="#"><img src="/themes/custom/sony_alphauniverse/images/icons-close.png" alt="popup close"></a>
+      <h2 class="popup-title">Challenge Submission</h2>
+      {{ drupal_entity_form('node', values={type: 'submission'}) }}
+    </div>
+  </div>
+</div>
+{% if block_voting == 1 %}
+<div class="voting-wrapper">
+{{ block_voting_content }}
+</div>
+{% endif %}
